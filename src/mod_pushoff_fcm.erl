@@ -164,7 +164,7 @@ restart_retry_timer(OldTimer) ->
 
 -spec pending_to_retry(any(), [any()]) -> {[any()]}.
 
-pending_to_retry(Head, RetryList) -> RetryList ++ Head.
+pending_to_retry(Head, RetryList) -> RetryList ++ [Head].
 
 pending_element_to_json({_, Payload, Token, DisableArgs}) ->
     Body = proplists:get_value(body, Payload),
