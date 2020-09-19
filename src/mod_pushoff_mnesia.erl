@@ -24,7 +24,7 @@ health() ->
 
 mnesia_set_from_record({Name, Fields}) ->
     ejabberd_mnesia:create(?MODULE, Name, [{disc_copies, [node()]},
-                                           {type, set},
+                                           {type, bag},
                                            {attributes, Fields}]).
 
 -spec(register_client(jid(), backend_id(), binary()) ->
@@ -34,23 +34,18 @@ mnesia_set_from_record({Name, Fields}) ->
 register_client(Jid, BackendId, Token) ->
     F = fun() ->
         MatchHeadReg =
-            #pushoff_registration{bare_jid = bare_jid(Jid), backend_id = BackendId, _='_'},
+            #pushoff_registration{bare_jid = bare_jid(Jid), backend_id = BackendId, token = Token, _='_'},
         ExistingReg =
             mnesia:select(pushoff_registration, [{MatchHeadReg, [], ['$_']}]),
-        Registration =
-            case ExistingReg of
-                [] ->
-                    #pushoff_registration{bare_jid = bare_jid(Jid),
-                                          token = Token,
-                                          backend_id = BackendId,
-                                          timestamp = erlang:timestamp()};
-
-                [OldReg] ->
-                    OldReg#pushoff_registration{token = Token,
-                                                backend_id = BackendId,
-                                                timestamp = erlang:timestamp()}
-            end,
-        mnesia:write(Registration),
+        case ExistingReg of
+            [] ->
+                mnesia:write(#pushoff_registration{bare_jid = bare_jid(Jid),
+                                                   token = Token,
+                                                   backend_id = BackendId,
+                                                   timestamp = erlang:timestamp()});
+            [OldReg] ->
+                ignore
+        end,
         ok
     end,
     case mnesia:transaction(F) of
