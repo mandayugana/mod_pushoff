@@ -109,8 +109,10 @@ handle_info(send, #state{send_queue = SendQ,
                               ?ERROR_MSG("error: ~p, deleting registration", [E]),
                               mod_pushoff_mnesia:unregister_client(DisableArgs)
                       end,
-                      Timestamp = erlang:timestamp(),
+                      {NewRetryTimer, Timestamp} = restart_retry_timer_now(RetryTimer),
                       State#state{send_queue = NewSendQ,
+                                  retry_timer = NewRetryTimer,
+                                  retry_timestamp = Timestamp,
                                   pending_timestamp = Timestamp};
 
                 {ok, {{_, _, _}, _, ResponseBody}} ->
@@ -160,6 +162,12 @@ restart_retry_timer(OldTimer) ->
     erlang:cancel_timer(OldTimer),
     Timestamp = erlang:timestamp(),
     NewTimer = erlang:send_after(?RETRY_INTERVAL, self(), {retry, Timestamp}),
+    {NewTimer, Timestamp}.
+
+restart_retry_timer_now(OldTimer) ->
+    erlang:cancel_timer(OldTimer),
+    Timestamp = erlang:timestamp(),
+    NewTimer = erlang:send_after(0, self(), {retry, Timestamp}),
     {NewTimer, Timestamp}.
 
 -spec pending_to_retry(any(), [any()]) -> {[any()]}.
