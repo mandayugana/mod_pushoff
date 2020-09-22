@@ -1,0 +1,7 @@
+modules:
+    mod_pushoff:
+        backends:
+            -
+                type: fcm
+                gateway: "https://fcm.googleapis.com/fcm/send"
+                api_key: ""
