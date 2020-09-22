@@ -297,14 +297,8 @@ get_fcm_tokens(#jid{} = JID) ->
             Error
     end.
 
-% mod_opt_type(backends) -> fun ?MODULE:parse_backends/1;
-mod_opt_type(backends) ->
-    econf:list(
-        backend()
-    );
-mod_opt_type(access_backends) ->
-    econf:acl();
-mod_opt_type(_) -> [backends, access_backends].
+mod_opt_type(backends) -> fun ?MODULE:parse_backends/1;
+mod_opt_type(_) -> [backends].
 
 mod_options(_Host) ->
     [{backends, []},
@@ -339,19 +333,6 @@ parse_backend(Opts) ->
                    #fcm_config{gateway = proplists:get_value(gateway, Opts), api_key = proplists:get_value(api_key, Opts)}
            end
       }.
-
-% -spec backend() -> yconf:validator(jid:jid()).
-backend() ->
-    econf:and_then(
-        econf:list(econf:any()),
-        fun(Val) ->
-            case parse_backend(Val) of
-                #backend_config{} ->
-                    Val;
-                _ ->
-                    econf:fail(Val)
-            end
-        end). 
 
 
 %
