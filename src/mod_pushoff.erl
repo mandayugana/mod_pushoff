@@ -190,7 +190,7 @@ start(Host, Opts) ->
     mod_pushoff_mnesia:create(),
 
     ok = ejabberd_hooks:add(remove_user, Host, ?MODULE, remove_user, 50),
-    ok = ejabberd_hooks:add(offline_message_hook, Host, ?MODULE, offline_message, ?OFFLINE_HOOK_PRIO),
+    % ok = ejabberd_hooks:add(offline_message_hook, Host, ?MODULE, offline_message, ?OFFLINE_HOOK_PRIO),
     ok = ejabberd_hooks:add(adhoc_local_commands, Host, ?MODULE, adhoc_local_commands, 75),
 
     Results = [start_worker(Host, B) || B <- parse_backends(maps:get(backends, Opts))],
@@ -202,7 +202,7 @@ start(Host, Opts) ->
 stop(Host) ->
     ?DEBUG("mod_pushoff:stop(~p), pid=~p", [Host, self()]),
     ok = ejabberd_hooks:delete(adhoc_local_commands, Host, ?MODULE, adhoc_local_commands, 75),
-    ok = ejabberd_hooks:delete(offline_message_hook, Host, ?MODULE, offline_message, ?OFFLINE_HOOK_PRIO),
+    % ok = ejabberd_hooks:delete(offline_message_hook, Host, ?MODULE, offline_message, ?OFFLINE_HOOK_PRIO),
     ok = ejabberd_hooks:delete(remove_user, Host, ?MODULE, remove_user, 50),
 
     [begin
@@ -218,7 +218,7 @@ reload(Host, NewOpts, _OldOpts) ->
     ok.
 
 depends(_, _) ->
-    [{mod_offline, hard}, {mod_adhoc, hard}].
+    [{mod_offline, soft}, {mod_adhoc, soft}].
 
 % mod_opt_type(backends) -> fun ?MODULE:parse_backends/1;
 mod_opt_type(backends) ->
