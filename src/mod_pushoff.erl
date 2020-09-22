@@ -118,7 +118,8 @@ remove_user(User, Server) ->
 
 adhoc_local_commands(Acc, From, To, #adhoc_command{node = Command, action = execute, xdata = XData} = Req) ->
     Host = To#jid.lserver,
-    Access = gen_mod:get_module_opt(Host, ?MODULE, access_backends),
+    Access = gen_mod:get_module_opt(Host, ?MODULE, access_backends,
+                                    fun(A) when is_atom(A) -> A end, all),
     Result = case acl:match_rule(Host, Access, From) of
         deny -> {error, xmpp:err_forbidden()};
         allow -> adhoc_perform_action(Command, From, XData)
@@ -196,7 +197,7 @@ start(Host, Opts) ->
     ok = ejabberd_hooks:add(adhoc_local_commands, Host, ?MODULE, adhoc_local_commands, 75),
     ejabberd_commands:register_commands(get_commands_spec()),
 
-    Results = [start_worker(Host, B) || B <- parse_backends(maps:get(backends, Opts))],
+    Results = [start_worker(Host, B) || B <- proplists:get_value(backends, Opts)],
     ?INFO_MSG("mod_pushoff workers: ~p", [Results]),
     ok.
 
@@ -345,7 +346,8 @@ backend_worker({Host, {T, R}}) -> gen_mod:get_module_proc(Host, binary_to_atom(<
 backend_worker({Host, Ref}) -> gen_mod:get_module_proc(Host, Ref).
 
 backend_configs(Host) ->
-    parse_backends(gen_mod:get_module_opt(Host, ?MODULE, backends)).
+    gen_mod:get_module_opt(Host, ?MODULE, backends,
+                           fun(O) when is_list(O) -> O end, []).
 
 backend_module(apns) -> ?MODULE_APNS;
 backend_module(fcm) -> ?MODULE_FCM.
