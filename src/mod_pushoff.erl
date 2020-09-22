@@ -32,6 +32,7 @@
 -include("logger.hrl").
 -include("xmpp.hrl").
 -include("adhoc.hrl").
+-include("ejabberd_commands.hrl").
 
 -include("mod_pushoff.hrl").
 
@@ -192,6 +193,7 @@ start(Host, Opts) ->
     ok = ejabberd_hooks:add(remove_user, Host, ?MODULE, remove_user, 50),
     % ok = ejabberd_hooks:add(offline_message_hook, Host, ?MODULE, offline_message, ?OFFLINE_HOOK_PRIO),
     ok = ejabberd_hooks:add(adhoc_local_commands, Host, ?MODULE, adhoc_local_commands, 75),
+    ejabberd_commands:register_commands(get_commands_spec()),
 
     Results = [start_worker(Host, B) || B <- parse_backends(maps:get(backends, Opts))],
     ?INFO_MSG("mod_pushoff workers: ~p", [Results]),
@@ -201,6 +203,12 @@ start(Host, Opts) ->
 
 stop(Host) ->
     ?DEBUG("mod_pushoff:stop(~p), pid=~p", [Host, self()]),
+    case gen_mod:is_loaded_elsewhere(Host, ?MODULE) of
+        false ->
+            ejabberd_commands:unregister_commands(get_commands_spec());
+        true ->
+            ok
+    end,
     ok = ejabberd_hooks:delete(adhoc_local_commands, Host, ?MODULE, adhoc_local_commands, 75),
     % ok = ejabberd_hooks:delete(offline_message_hook, Host, ?MODULE, offline_message, ?OFFLINE_HOOK_PRIO),
     ok = ejabberd_hooks:delete(remove_user, Host, ?MODULE, remove_user, 50),
@@ -219,6 +227,74 @@ reload(Host, NewOpts, _OldOpts) ->
 
 depends(_, _) ->
     [{mod_offline, soft}, {mod_adhoc, soft}].
+
+%%%
+%%% Register commands
+%%%
+
+get_commands_spec() -> 
+    [#ejabberd_commands{name = register_fcm_token_with_backend, tags = [fcm],
+	            		desc = "Register an FCM token with backend",
+                        module = ?MODULE, function = register_fcm_token,
+                        args_desc = ["User JID", "FCM token", "Backend ref"],
+                        args_example = ["tom@localhost", "f8D1rsA_TteUp_de5A5KZO:APA91bHLBqJgebUBgzrIJfmmtGXivLPOuivuIoMq2XRslxhqKPLdW4E6Ms1is9WYx-sJU-sbeFKywptVnrilv2yiiKK5TFQdA_tBzCd_sg625NEfQ-0ZqQXnrF530dvxVqxdUmAAbCI-", "fcm-prod"],
+                        result_desc = "List of registered FCM tokens",
+                        result_example = ["f8D1rsA_TteUp_de5A5KZO:APA91bHLBqJgebUBgzrIJfmmtGXivLPOuivuIoMq2XRslxhqKPLdW4E6Ms1is9WYx-sJU-sbeFKywptVnrilv2yiiKK5TFQdA_tBzCd_sg625NEfQ-0ZqQXnrF530dvxVqxdUmAAbCI-",
+                            "c6-D5hdMRwyDQRwBneLX-B:APA91bGnlPEf6ESXcFDHUV1lP1koek4GUeYkbc0Ni788eZgtT0GNc5_-PxqacNTC-dYCGK-HY-KTRWnSo5oOKKLpvwgajCmY0GVkuVIADfHuuxJYuILKxtvUSYLaK8ckcivN0moW_3u3"],
+                        args = [{jid, binary}, {token, binary}, {backend_ref, binary}],
+                        result = {fcm_tokens, {list, {fcm_token, string}}}},
+     #ejabberd_commands{name = register_fcm_token, tags = [fcm],
+	            		desc = "Register an FCM token",
+                        module = ?MODULE, function = register_fcm_token,
+                        args_desc = ["User JID", "FCM token"],
+                        args_example = ["tom@localhost", "f8D1rsA_TteUp_de5A5KZO:APA91bHLBqJgebUBgzrIJfmmtGXivLPOuivuIoMq2XRslxhqKPLdW4E6Ms1is9WYx-sJU-sbeFKywptVnrilv2yiiKK5TFQdA_tBzCd_sg625NEfQ-0ZqQXnrF530dvxVqxdUmAAbCI-"],
+                        result_desc = "List of registered FCM tokens",
+                        result_example = ["f8D1rsA_TteUp_de5A5KZO:APA91bHLBqJgebUBgzrIJfmmtGXivLPOuivuIoMq2XRslxhqKPLdW4E6Ms1is9WYx-sJU-sbeFKywptVnrilv2yiiKK5TFQdA_tBzCd_sg625NEfQ-0ZqQXnrF530dvxVqxdUmAAbCI-",
+                            "c6-D5hdMRwyDQRwBneLX-B:APA91bGnlPEf6ESXcFDHUV1lP1koek4GUeYkbc0Ni788eZgtT0GNc5_-PxqacNTC-dYCGK-HY-KTRWnSo5oOKKLpvwgajCmY0GVkuVIADfHuuxJYuILKxtvUSYLaK8ckcivN0moW_3u3"],
+                        args = [{jid, binary}, {token, binary}],
+                        result = {fcm_tokens, {list, {fcm_token, string}}}},
+     #ejabberd_commands{name = registered_fcm_tokens, tags = [fcm],
+	            		desc = "Get list of FCM token",
+                        module = ?MODULE, function = get_fcm_tokens,
+                        args_desc = ["User JID"],
+                        args_example = ["tom@localhost"],
+                        result_desc = "List of registered FCM tokens",
+                        result_example = ["f8D1rsA_TteUp_de5A5KZO:APA91bHLBqJgebUBgzrIJfmmtGXivLPOuivuIoMq2XRslxhqKPLdW4E6Ms1is9WYx-sJU-sbeFKywptVnrilv2yiiKK5TFQdA_tBzCd_sg625NEfQ-0ZqQXnrF530dvxVqxdUmAAbCI-",
+                            "c6-D5hdMRwyDQRwBneLX-B:APA91bGnlPEf6ESXcFDHUV1lP1koek4GUeYkbc0Ni788eZgtT0GNc5_-PxqacNTC-dYCGK-HY-KTRWnSo5oOKKLpvwgajCmY0GVkuVIADfHuuxJYuILKxtvUSYLaK8ckcivN0moW_3u3"],
+                        args = [{jid, binary}],
+                        result = {fcm_tokens, {list, {fcm_token, string}}}}
+        ].
+
+% commands
+register_fcm_token(JIDBinary, Token) when is_binary(JIDBinary), is_binary(Token) ->
+    register_fcm_token(JIDBinary, Token, no_backend).
+register_fcm_token(JIDBinary, Token, BackendRef) when is_binary(JIDBinary), is_binary(Token) ->
+    #jid{lserver = LServer} = JID = jid:decode(JIDBinary),
+    Ref = if
+        is_binary(BackendRef) -> {fcm, BackendRef};
+        true -> fcm
+    end,
+    case validate_backend_ref(LServer, Ref) of
+        {error, E} ->
+            {error, "Backend not valid"};
+        {ok, Ref} ->
+            case mod_pushoff_mnesia:register_client(JID, {LServer, Ref}, Token) of
+                {registered, _} ->
+                    get_fcm_tokens(JID);
+                Error ->
+                    Error
+            end
+    end.
+
+get_fcm_tokens(JID) when is_binary(JID) ->
+    get_fcm_tokens(jid:decode(JID));
+get_fcm_tokens(#jid{} = JID) ->
+    case mod_pushoff_mnesia:list_registrations(JID) of
+        {registrations, RL} ->
+            [T || #pushoff_registration{token = T} <- RL];
+        Error ->
+            Error
+    end.
 
 % mod_opt_type(backends) -> fun ?MODULE:parse_backends/1;
 mod_opt_type(backends) ->
