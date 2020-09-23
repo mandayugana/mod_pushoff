@@ -25,7 +25,7 @@
 -behaviour(gen_mod).
 
 -compile(export_all).
--export([start/2, stop/1, reload/3, depends/2, mod_options/1, mod_opt_type/1, parse_backends/1,
+-export([start/2, stop/1, reload/3, depends/2, mod_opt_type/1, parse_backends/1,
          offline_message/1, adhoc_local_commands/4, remove_user/2,
          health/0]).
 -export([register_fcm_token/2, register_fcm_token/3, get_fcm_tokens/1]).
