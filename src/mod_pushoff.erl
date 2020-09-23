@@ -28,7 +28,7 @@
 -export([start/2, stop/1, reload/3, depends/2, mod_options/1, mod_opt_type/1, parse_backends/1,
          offline_message/1, adhoc_local_commands/4, remove_user/2,
          health/0]).
--export([register_fcm_token/2, register_fcm_token/3, get_fcm_tokens/1]).
+-export([register_fcm_token/2, register_fcm_token/3, get_fcm_tokens/1, fcm_test/1]).
 
 -include("logger.hrl").
 -include("xmpp.hrl").
@@ -263,7 +263,14 @@ get_commands_spec() ->
                         result_example = ["f8D1rsA_TteUp_de5A5KZO:APA91bHLBqJgebUBgzrIJfmmtGXivLPOuivuIoMq2XRslxhqKPLdW4E6Ms1is9WYx-sJU-sbeFKywptVnrilv2yiiKK5TFQdA_tBzCd_sg625NEfQ-0ZqQXnrF530dvxVqxdUmAAbCI-",
                             "c6-D5hdMRwyDQRwBneLX-B:APA91bGnlPEf6ESXcFDHUV1lP1koek4GUeYkbc0Ni788eZgtT0GNc5_-PxqacNTC-dYCGK-HY-KTRWnSo5oOKKLpvwgajCmY0GVkuVIADfHuuxJYuILKxtvUSYLaK8ckcivN0moW_3u3"],
                         args = [{jid, binary}],
-                        result = {fcm_tokens, {list, {fcm_token, string}}}}
+                        result = {fcm_tokens, {list, {fcm_token, string}}}},
+     #ejabberd_commands{name = test_fcm, tags = [fcm],
+	            		desc = "Send FCM test message to a user",
+                        module = ?MODULE, function = fcm_test,
+                        args_desc = ["User JID"],
+                        args_example = ["tom@localhost"],
+                        args = [{jid, binary}],
+                        result = {res, rescode}}
         ].
 
 % commands
@@ -296,6 +303,22 @@ get_fcm_tokens(#jid{} = JID) ->
         Error ->
             Error
     end.
+
+fcm_test(JIDBinary) when is_binary(JIDBinary) ->
+    JID = jid:decode(JIDBinary),
+    RegistrationList = mod_pushoff_mnesia:list_registrations(JID),
+    case RegistrationList of
+        {registrations, []} ->
+            {ok, "No FCM token found"};
+        {registrations, Rs} ->
+            Payload = [{title, <<"Test message">>}, {body, <<"This is a test message from XMPP server.">>}],
+            [dispatch(R, Payload) || R <- Rs],
+            {ok, "Sent"};
+        _ ->
+            {error, "Error retrieving tokens"}
+    end;
+fcm_test(_) ->
+    {error, "Invalid JID"}.
 
 % mod_opt_type(backends) -> fun ?MODULE:parse_backends/1;
 mod_opt_type(backends) ->
