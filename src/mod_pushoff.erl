@@ -301,10 +301,6 @@ get_fcm_tokens(#jid{} = JID) ->
 mod_opt_type(backends) -> fun ?MODULE:parse_backends/1;
 mod_opt_type(_) -> [backends].
 
-mod_options(_Host) ->
-    [{backends, []},
-     {access_backends, all}].
-
 validate_backend_ref(Host, Ref) ->
     case [R || #backend_config{ref=R} <- backend_configs(Host), R == Ref] of
         [R] -> {ok, R};
